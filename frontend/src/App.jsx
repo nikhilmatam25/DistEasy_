@@ -1,65 +1,39 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import "./App.css";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+import MainLayout from "./layouts/MainLayout";
+
+import Dashboard from "./pages/Dashboard";
+import Inventory from "./pages/Inventory";
+import Customers from "./pages/Customers";
+import Orders from "./pages/Orders";
+import Payments from "./pages/Payments";
+import Reports from "./pages/Reports";
+import Analytics from "./pages/Analytics";
+import StockPredictor from "./pages/StockPredictor";
+import Delivery from "./pages/Delivery";
+import Settings from "./pages/Settings";
 
 function App() {
-  const [products, setProducts] = useState([]);
-  const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    axios
-      .get("http://127.0.0.1:8000/products")
-      .then((response) => {
-        setProducts(response.data.products);
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-  }, []);
-
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(search.toLowerCase())
-  );
-
   return (
-    <div className="App">
-      <h1>DistEasy Inventory</h1>
-
-      <input
-        type="text"
-        placeholder="Search products..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        style={{
-          padding: "10px",
-          width: "300px",
-          marginBottom: "20px",
-          fontSize: "16px",
-        }}
-      />
-
-      <table border="1" cellPadding="8">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Product Name</th>
-            <th>Price (₹)</th>
-            <th>Stock</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {filteredProducts.map((product) => (
-            <tr key={product.id}>
-              <td>{product.id}</td>
-              <td>{product.name}</td>
-              <td>₹{product.price}</td>
-              <td>{product.stock}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="inventory" element={<Inventory />} />
+          <Route path="customers" element={<Customers />} />
+          <Route path="orders" element={<Orders />} />
+          <Route path="payments" element={<Payments />} />
+          <Route path="reports" element={<Reports />} />
+          <Route path="analytics" element={<Analytics />} />
+          <Route
+            path="stockpredictor"
+            element={<StockPredictor />}
+          />
+          <Route path="delivery" element={<Delivery />} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
 
