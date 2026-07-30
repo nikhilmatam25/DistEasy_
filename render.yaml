@@ -3,7 +3,7 @@ services:
     name: disteasy-backend
     runtime: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && python database/create_tables.py
+    buildCommand: pip install -r requirements.txt && python database/create_tables.py && python seed_data.py
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
