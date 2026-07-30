@@ -12,7 +12,7 @@ import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import WarningIcon from "@mui/icons-material/Warning";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
-const API = "/api";
+const API = import.meta.env.VITE_API_URL || "/api";
 
 
 function ConfidenceBadge({ level }) {

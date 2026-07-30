@@ -14,7 +14,7 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PeopleIcon from "@mui/icons-material/People";
 import InventoryIcon from "@mui/icons-material/Inventory";
 
-const API = "/api";
+const API = import.meta.env.VITE_API_URL || "/api";
 
 const COLORS = ["#1976d2", "#2e7d32", "#e65100", "#6a1b9a", "#c62828", "#00838f", "#f57f17", "#4a148c", "#1b5e20", "#b71c1c"];
 

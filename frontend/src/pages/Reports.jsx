@@ -13,7 +13,7 @@ import InventoryIcon from "@mui/icons-material/Inventory";
 import PeopleIcon from "@mui/icons-material/People";
 import WarningIcon from "@mui/icons-material/Warning";
 
-const API = "/api";
+const API = import.meta.env.VITE_API_URL || "/api";
 
 
 const today = () => new Date().toISOString().split("T")[0];

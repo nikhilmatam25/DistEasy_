@@ -14,7 +14,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import SearchIcon from "@mui/icons-material/Search";
 import InputAdornment from "@mui/material/InputAdornment";
 
-const API = "/api";
+const API = import.meta.env.VITE_API_URL || "/api";
 
 const STATUSES = ["Pending", "In Transit", "Delivered"];
 const today = () => new Date().toISOString().split("T")[0];

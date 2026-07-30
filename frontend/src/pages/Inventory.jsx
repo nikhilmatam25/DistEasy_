@@ -6,7 +6,7 @@ import {
   Avatar, Stack, Dialog, DialogTitle, DialogContent, DialogActions,
 } from "@mui/material";
 
-const API = "/api";
+const API = import.meta.env.VITE_API_URL || "/api";
 
 function Inventory() {
   const [products, setProducts] = useState([]);

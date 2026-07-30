@@ -28,7 +28,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
 import SaveIcon from "@mui/icons-material/Save";
 
-const API = "/api";
+const API = import.meta.env.VITE_API_URL || "/api";
 
 
 function Orders() {

@@ -16,7 +16,7 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import PersonSearchIcon from "@mui/icons-material/PersonSearch";
 import PaymentsIcon from "@mui/icons-material/Payments";
 
-const API = "/api";
+const API = import.meta.env.VITE_API_URL || "/api";
 
 const METHODS = ["Cash", "UPI", "Credit"];
 

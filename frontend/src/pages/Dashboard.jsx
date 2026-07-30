@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Grid, Paper, Typography } from "@mui/material";
 
-const API = "/api";
+const API = import.meta.env.VITE_API_URL || "/api";
 
 function Dashboard() {
   const [data, setData] = useState({

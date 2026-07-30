@@ -13,7 +13,7 @@ import ReceiptIcon from "@mui/icons-material/Receipt";
 import SaveIcon from "@mui/icons-material/Save";
 import InfoIcon from "@mui/icons-material/Info";
 
-const API = "/api";
+const API = import.meta.env.VITE_API_URL || "/api";
 
 
 function Settings() {
