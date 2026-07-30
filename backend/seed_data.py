@@ -1,8 +1,7 @@
 """
 Auto-generated seed script. DO NOT EDIT MANUALLY.
 Re-generate by running: python generate_seed.py
-This script seeds the Render SQLite DB with initial data.
-Uses INSERT OR IGNORE so it is safe to run multiple times.
+Seeds the Render SQLite DB. Uses INSERT OR IGNORE - safe to run multiple times.
 """
 import sqlite3
 import os
@@ -14,10 +13,10 @@ def seed():
     conn = sqlite3.connect(DATABASE)
     conn.execute("PRAGMA foreign_keys = OFF")
     cur = conn.cursor()
-    total = 0
+    inserted = {}
 
-    # --- products (41 rows) ---
-    products_rows = [
+    # products: 41 rows
+    products_data = [
         (1, 'Layina Dates 250g', 150.0, 97),
         (2, 'Layina Dates 500g (1+1)', 284.0, 95),
         (3, 'Lion Dates Syrup 500g', 206.0, 100),
@@ -61,13 +60,13 @@ def seed():
         (41, 'Lion Sulthan Dates 500g (1+1)', 215.0, 100),
     ]
     cur.executemany(
-        "INSERT OR IGNORE INTO \"products\" ("id", "name", "price", "stock") VALUES (?, ?, ?, ?)",
-        products_rows
+        'INSERT OR IGNORE INTO products (id, name, price, stock) VALUES (?, ?, ?, ?)',
+        products_data
     )
-    total += cur.rowcount
+    inserted['products'] = cur.rowcount
 
-    # --- customers (226 rows) ---
-    customers_rows = [
+    # customers: 226 rows
+    customers_data = [
         (1, '\ufeff1962 BANGALORE BAKERY SWEETS', None, None, None, None, 0.0, None),
         (2, 'Abhivruddi Dry Fruits house(old)', None, None, None, None, 0.0, None),
         (3, 'ADITHYA MART', None, None, None, None, 14999.0, None),
@@ -296,25 +295,25 @@ def seed():
         (226, 'ZAHEER AGENCIES', None, None, None, None, 0.0, None),
     ]
     cur.executemany(
-        "INSERT OR IGNORE INTO \"customers\" ("id", "shop_name", "owner", "phone", "address", "route", "balance", "last_order") VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        customers_rows
+        'INSERT OR IGNORE INTO customers (id, shop_name, owner, phone, address, route, balance, last_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        customers_data
     )
-    total += cur.rowcount
+    inserted['customers'] = cur.rowcount
 
-    # --- orders (3 rows) ---
-    orders_rows = [
+    # orders: 3 rows
+    orders_data = [
         (1, 1, '2026-07-27 21:21:25', 1870.0, 'Credit'),
         (2, 3, '2026-07-27 21:30:31', 1500.0, 'Credit'),
         (3, 20, '2026-07-28 22:37:52', 2004.0, 'Credit'),
     ]
     cur.executemany(
-        "INSERT OR IGNORE INTO \"orders\" ("id", "customer_id", "order_date", "total_amount", "payment_type") VALUES (?, ?, ?, ?, ?)",
-        orders_rows
+        'INSERT OR IGNORE INTO orders (id, customer_id, order_date, total_amount, payment_type) VALUES (?, ?, ?, ?, ?)',
+        orders_data
     )
-    total += cur.rowcount
+    inserted['orders'] = cur.rowcount
 
-    # --- order_items (5 rows) ---
-    order_items_rows = [
+    # order_items: 5 rows
+    order_items_data = [
         (1, 1, 1, 3, 150.0),
         (2, 1, 2, 5, 284.0),
         (3, 2, 4, 15, 100.0),
@@ -322,35 +321,35 @@ def seed():
         (5, 3, 10, 1, 324.0),
     ]
     cur.executemany(
-        "INSERT OR IGNORE INTO \"order_items\" ("id", "order_id", "product_id", "quantity", "price") VALUES (?, ?, ?, ?, ?)",
-        order_items_rows
+        'INSERT OR IGNORE INTO order_items (id, order_id, product_id, quantity, price) VALUES (?, ?, ?, ?, ?)',
+        order_items_data
     )
-    total += cur.rowcount
+    inserted['order_items'] = cur.rowcount
 
-    # --- payments (2 rows) ---
-    payments_rows = [
+    # payments: 2 rows
+    payments_data = [
         (2, 95, 24999.0, 'UPI', '2026-07-28', '', None, '2026-07-28 21:56:08'),
         (3, 20, 3000.0, 'Cash', '2026-07-28', '', None, '2026-07-28 22:39:35'),
     ]
     cur.executemany(
-        "INSERT OR IGNORE INTO \"payments\" ("id", "customer_id", "amount", "payment_method", "payment_date", "notes", "order_id", "created_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        payments_rows
+        'INSERT OR IGNORE INTO payments (id, customer_id, amount, payment_method, payment_date, notes, order_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        payments_data
     )
-    total += cur.rowcount
+    inserted['payments'] = cur.rowcount
 
-    # --- delivery (2 rows) ---
-    delivery_rows = [
+    # delivery: 2 rows
+    delivery_data = [
         (1, 1, 1, 'Pending', None, None, '', '', '', '2026-07-27 21:21:25'),
         (2, 2, 3, 'Pending', None, None, '', '', '', '2026-07-27 21:30:31'),
     ]
     cur.executemany(
-        "INSERT OR IGNORE INTO \"delivery\" ("id", "order_id", "customer_id", "status", "delivery_date", "actual_delivery_date", "driver_name", "route", "notes", "created_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        delivery_rows
+        'INSERT OR IGNORE INTO delivery (id, order_id, customer_id, status, delivery_date, actual_delivery_date, driver_name, route, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        delivery_data
     )
-    total += cur.rowcount
+    inserted['delivery'] = cur.rowcount
 
-    # --- company_settings (6 rows) ---
-    company_settings_rows = [
+    # company_settings: 6 rows
+    company_settings_data = [
         ('company_name', 'DistEasy Distributors'),
         ('phone', ''),
         ('email', ''),
@@ -359,15 +358,17 @@ def seed():
         ('theme', 'light'),
     ]
     cur.executemany(
-        "INSERT OR IGNORE INTO \"company_settings\" ("key", "value") VALUES (?, ?)",
-        company_settings_rows
+        'INSERT OR IGNORE INTO company_settings (key, value) VALUES (?, ?)',
+        company_settings_data
     )
-    total += cur.rowcount
+    inserted['company_settings'] = cur.rowcount
 
     conn.execute("PRAGMA foreign_keys = ON")
     conn.commit()
     conn.close()
-    print(f"Seed complete: {total} rows inserted across all tables.")
+    for tbl, cnt in inserted.items():
+        print(f"  {tbl}: {cnt} rows inserted")
+    print("Seed complete.")
 
 
 if __name__ == "__main__":
