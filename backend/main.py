@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,7 +15,33 @@ from routers.stock_predictor_router import router as stock_predictor_router
 from routers.delivery_router import router as delivery_router
 from routers.settings_router import router as settings_router
 
-app = FastAPI(title="DistEasy API", version="1.0.0")
+
+def _bootstrap_db():
+    """Create tables + seed data on every startup. Safe to run repeatedly."""
+    try:
+        # 1. Create / migrate all tables
+        import database.create_tables  # noqa: F401 — runs table DDL at import time
+        print("[startup] Tables OK")
+    except Exception as e:
+        print(f"[startup] create_tables error: {e}")
+
+    try:
+        # 2. Seed all reference data (INSERT OR IGNORE — idempotent)
+        from seed_data import seed
+        seed()
+        print("[startup] Seed OK")
+    except Exception as e:
+        print(f"[startup] seed error: {e}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _bootstrap_db()
+    yield
+
+
+app = FastAPI(title="DistEasy API", version="1.0.0", lifespan=lifespan)
+
 
 # Build CORS origins: always allow local dev + all known production URLs
 _origins = [
