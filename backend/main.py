@@ -16,17 +16,16 @@ from routers.settings_router import router as settings_router
 
 app = FastAPI(title="DistEasy API", version="1.0.0")
 
-# Build CORS origins: always allow local dev + Vercel production URLs
+# Build CORS origins: always allow local dev + all known production URLs
 _origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     # Vercel production deployment URLs
     "https://frontend-livid-theta-47.vercel.app",
     "https://frontend-qbdfjojth-dist-easy.vercel.app",
-    # Allow any *.vercel.app subdomain for preview deployments
     "https://frontend-dist-easy.vercel.app",
 ]
-# Also support dynamic URL via env var (set in Render dashboard)
+# Also support dynamic URL via env var (set in Render dashboard → FRONTEND_URL)
 _frontend_url = os.getenv("FRONTEND_URL", "").strip()
 if _frontend_url:
     _origins.append(_frontend_url)
