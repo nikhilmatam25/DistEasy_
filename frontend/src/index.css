@@ -1,15 +1,27 @@
-/* Reset for DistEasy - MUI-compatible layout */
+/* =========================================
+   LION Distributor — Global Styles
+   Works on: Desktop, Laptop, Tablet, Mobile
+   ========================================= */
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
 
-body {
+/* Prevent horizontal scroll on all devices */
+html, body {
   margin: 0;
   padding: 0;
-  font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+body {
+  font-family: 'Roboto', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   background-color: #f4f6f8;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Android: safe area for gesture navigation bar */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 #root {
@@ -22,25 +34,46 @@ body {
   flex-direction: column;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-::-webkit-scrollbar-thumb {
-  background: #bbb;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #888;
+/* ── Touch-friendly tap targets ── */
+button, a, [role="button"] {
+  min-height: 44px;
+  cursor: pointer;
 }
 
-/* Print styles */
-@media print {
-  .no-print {
-    display: none !important;
+/* ── Tables: horizontally scrollable on mobile ── */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Prevent text from overflowing cards on mobile ── */
+.MuiCard-root, .MuiPaper-root {
+  word-break: break-word;
+}
+
+/* ── Custom Scrollbar (desktop) ── */
+@media (pointer: fine) {
+  ::-webkit-scrollbar       { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #f1f1f1; }
+  ::-webkit-scrollbar-thumb { background: #bbb; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #888; }
+}
+
+/* ── Dialogs/Modals: full-width on small screens ── */
+@media (max-width: 599px) {
+  .MuiDialog-paper {
+    margin: 16px !important;
+    width: calc(100% - 32px) !important;
+    max-height: calc(100% - 80px) !important;
+    border-radius: 16px !important;
   }
+  /* Form inputs: larger touch area */
+  .MuiInputBase-root {
+    font-size: 16px !important; /* prevents iOS zoom-in on focus */
+  }
+}
+
+/* ── Print: hide nav elements ── */
+@media print {
+  .no-print { display: none !important; }
 }

@@ -1,29 +1,63 @@
-import { AppBar, Toolbar, Typography, IconButton, Avatar, Box } from "@mui/material";
-import NotificationsIcon from "@mui/icons-material/Notifications";
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  IconButton,
+  Box,
+  Avatar,
+} from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
 
-function Topbar() {
+function Topbar({ isMobile, drawerWidth, onMenuClick }) {
   return (
     <AppBar
       position="fixed"
+      elevation={2}
       sx={{
-        width: `calc(100% - 240px)`,
-        ml: "240px",
-        backgroundColor: "#1976d2",
+        // Desktop: offset by sidebar width; Mobile: full width
+        width: { md: `calc(100% - ${drawerWidth}px)` },
+        ml: { md: `${drawerWidth}px` },
+        backgroundColor: "#1565C0",
+        zIndex: (theme) => theme.zIndex.drawer + 1,
       }}
     >
-      <Toolbar>
-        <Typography variant="h6" sx={{ flexGrow: 1 }}>
-          DistEasy Distributor System
-        </Typography>
+      <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
+        {/* Hamburger — mobile only */}
+        {isMobile && (
+          <IconButton
+            color="inherit"
+            edge="start"
+            onClick={onMenuClick}
+            sx={{ mr: 1 }}
+          >
+            <MenuIcon />
+          </IconButton>
+        )}
 
-        <IconButton color="inherit">
-          <NotificationsIcon />
-        </IconButton>
-
-        <Box sx={{ display: "flex", alignItems: "center", ml: 2 }}>
-          <Avatar sx={{ bgcolor: "orange", mr: 1 }}>A</Avatar>
-          <Typography>Admin</Typography>
+        {/* App Title */}
+        <Box sx={{ flexGrow: 1, display: "flex", alignItems: "center", gap: 1 }}>
+          <Typography
+            variant={isMobile ? "subtitle1" : "h6"}
+            fontWeight="700"
+            letterSpacing={0.5}
+            noWrap
+          >
+            DistEasy
+          </Typography>
         </Box>
+
+        {/* Avatar */}
+        <Avatar
+          sx={{
+            bgcolor: "#FFA726",
+            width: 34,
+            height: 34,
+            fontSize: 14,
+            fontWeight: "bold",
+          }}
+        >
+          LD
+        </Avatar>
       </Toolbar>
     </AppBar>
   );
