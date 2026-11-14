@@ -14,6 +14,7 @@ from routers.analytics_router import router as analytics_router
 from routers.stock_predictor_router import router as stock_predictor_router
 from routers.delivery_router import router as delivery_router
 from routers.settings_router import router as settings_router
+from routers.billing_router import router as billing_router
 
 
 def _bootstrap_db():
@@ -89,3 +90,4 @@ app.include_router(analytics_router)
 app.include_router(stock_predictor_router)
 app.include_router(delivery_router)
 app.include_router(settings_router)
+app.include_router(billing_router)

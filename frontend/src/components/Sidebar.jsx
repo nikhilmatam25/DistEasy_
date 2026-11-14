@@ -16,6 +16,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import PeopleIcon from "@mui/icons-material/People";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import ReceiptIcon from "@mui/icons-material/Receipt";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import BarChartIcon from "@mui/icons-material/BarChart";
@@ -28,6 +29,7 @@ const menuItems = [
   { text: "Inventory",      icon: <InventoryIcon />,     path: "/inventory" },
   { text: "Customers",      icon: <PeopleIcon />,        path: "/customers" },
   { text: "Orders",         icon: <ShoppingCartIcon />,  path: "/orders" },
+  { text: "Billing",        icon: <ReceiptIcon />,       path: "/billing" },
   { text: "Payments",       icon: <PaymentsIcon />,      path: "/payments" },
   { text: "Reports",        icon: <AssessmentIcon />,    path: "/reports" },
   { text: "Analytics",      icon: <BarChartIcon />,      path: "/analytics" },

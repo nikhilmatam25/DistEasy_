@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS delivery (
 """)
 
 # -------------------------
-# Company Settings Table (NEW)
+# Company Settings Table
 # -------------------------
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS company_settings (
@@ -124,12 +124,77 @@ defaults = [
     ("address", ""),
     ("gst_number", ""),
     ("theme", "light"),
+    # Billing / banking defaults
+    ("bank_name", ""),
+    ("bank_account", ""),
+    ("bank_ifsc", ""),
+    ("bank_branch", ""),
+    ("state_code", ""),        # e.g. "36" for Telangana
+    ("state_name", ""),        # e.g. "Telangana"
+    ("invoice_prefix", "INV"),
 ]
 for key, value in defaults:
     cursor.execute(
         "INSERT OR IGNORE INTO company_settings (key, value) VALUES (?, ?)",
         (key, value)
     )
+
+# -------------------------
+# Invoices Table (Billing)
+# -------------------------
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS invoices (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    invoice_number   TEXT    NOT NULL UNIQUE,
+    invoice_date     TEXT    NOT NULL,
+    customer_id      INTEGER NOT NULL,
+    customer_snapshot TEXT   NOT NULL DEFAULT '{}',
+    subtotal         REAL    NOT NULL DEFAULT 0,
+    discount_pct     REAL    NOT NULL DEFAULT 0,
+    discount_amount  REAL    NOT NULL DEFAULT 0,
+    taxable_amount   REAL    NOT NULL DEFAULT 0,
+    cgst_amount      REAL    NOT NULL DEFAULT 0,
+    sgst_amount      REAL    NOT NULL DEFAULT 0,
+    igst_amount      REAL    NOT NULL DEFAULT 0,
+    total_amount     REAL    NOT NULL DEFAULT 0,
+    amount_in_words  TEXT    NOT NULL DEFAULT '',
+    payment_status   TEXT    NOT NULL DEFAULT 'Unpaid',
+    notes            TEXT    DEFAULT '',
+    order_id         INTEGER,
+    status           TEXT    NOT NULL DEFAULT 'Active',
+    is_interstate    INTEGER NOT NULL DEFAULT 0,
+    created_at       TEXT    DEFAULT (datetime('now','localtime')),
+    FOREIGN KEY(customer_id) REFERENCES customers(id),
+    FOREIGN KEY(order_id)    REFERENCES orders(id)
+)
+""")
+
+# -------------------------
+# Invoice Items Table (Billing)
+# -------------------------
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS invoice_items (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    invoice_id      INTEGER NOT NULL,
+    product_id      INTEGER,
+    description     TEXT    NOT NULL,
+    hsn_code        TEXT    DEFAULT '',
+    mrp             REAL    DEFAULT 0,
+    selling_price   REAL    NOT NULL DEFAULT 0,
+    quantity        REAL    NOT NULL DEFAULT 1,
+    unit            TEXT    DEFAULT 'Pcs',
+    cgst_pct        REAL    DEFAULT 0,
+    sgst_pct        REAL    DEFAULT 0,
+    igst_pct        REAL    DEFAULT 0,
+    taxable_amount  REAL    DEFAULT 0,
+    cgst_amount     REAL    DEFAULT 0,
+    sgst_amount     REAL    DEFAULT 0,
+    igst_amount     REAL    DEFAULT 0,
+    total_amount    REAL    DEFAULT 0,
+    FOREIGN KEY(invoice_id)  REFERENCES invoices(id),
+    FOREIGN KEY(product_id)  REFERENCES products(id)
+)
+""")
 
 # Seed delivery rows for existing orders that have no delivery record
 cursor.execute("""

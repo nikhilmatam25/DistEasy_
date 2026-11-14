@@ -20,6 +20,7 @@ import InventoryIcon from "@mui/icons-material/Inventory";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PeopleIcon from "@mui/icons-material/People";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import ReceiptIcon from "@mui/icons-material/Receipt";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import BarChartIcon from "@mui/icons-material/BarChart";
@@ -36,6 +37,7 @@ const PRIMARY_TABS = [
 ];
 
 const MORE_ITEMS = [
+  { text: "Billing",        icon: <ReceiptIcon />,       path: "/billing" },
   { text: "Payments",       icon: <PaymentsIcon />,      path: "/payments" },
   { text: "Reports",        icon: <AssessmentIcon />,    path: "/reports" },
   { text: "Analytics",      icon: <BarChartIcon />,      path: "/analytics" },

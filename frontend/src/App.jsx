@@ -6,6 +6,8 @@ import Dashboard from "./pages/Dashboard";
 import Inventory from "./pages/Inventory";
 import Customers from "./pages/Customers";
 import Orders from "./pages/Orders";
+import Billing from "./pages/Billing";
+import BillingNew from "./pages/BillingNew";
 import Payments from "./pages/Payments";
 import Reports from "./pages/Reports";
 import Analytics from "./pages/Analytics";
@@ -22,6 +24,8 @@ function App() {
           <Route path="inventory" element={<Inventory />} />
           <Route path="customers" element={<Customers />} />
           <Route path="orders" element={<Orders />} />
+          <Route path="billing" element={<Billing />} />
+          <Route path="billing/new" element={<BillingNew />} />
           <Route path="payments" element={<Payments />} />
           <Route path="reports" element={<Reports />} />
           <Route path="analytics" element={<Analytics />} />
