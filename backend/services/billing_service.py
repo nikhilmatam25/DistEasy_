@@ -41,15 +41,18 @@ def _amount_in_words(amount: float) -> str:
 
 
 def _next_invoice_number(cursor) -> str:
-    """Generate the next sequential invoice number, e.g. INV-2024-0001."""
+    """Generate the next sequential invoice number using configurable prefix from settings."""
     from datetime import datetime
     year = datetime.now().year
+    cursor.execute("SELECT value FROM company_settings WHERE key = 'invoice_prefix'")
+    row = cursor.fetchone()
+    prefix = row[0].strip() if row and row[0] else "INV"
     cursor.execute(
         "SELECT COUNT(*) FROM invoices WHERE invoice_number LIKE ?",
-        (f"INV-{year}-%",)
+        (f"{prefix}-{year}-%",)
     )
     count = cursor.fetchone()[0]
-    return f"INV-{year}-{count + 1:04d}"
+    return f"{prefix}-{year}-{count + 1:04d}"
 
 
 def _row_to_dict(row) -> dict:
@@ -88,7 +91,7 @@ def get_billing_summary():
         conn.close()
 
 
-def get_all_invoices(search="", date_from=None, date_to=None, status=None):
+def get_all_invoices(search="", date_from=None, date_to=None, status=None, customer_id=None):
     conn = get_connection()
     try:
         c = conn.cursor()
@@ -111,6 +114,9 @@ def get_all_invoices(search="", date_from=None, date_to=None, status=None):
         if status:
             query += " AND i.payment_status = ?"
             params.append(status)
+        if customer_id:
+            query += " AND i.customer_id = ?"
+            params.append(customer_id)
         query += " ORDER BY i.id DESC"
         c.execute(query, params)
         rows = c.fetchall()
@@ -288,11 +294,26 @@ def create_invoice(customer_id, invoice_date, items, discount_pct=0.0,
                             f"Insufficient stock for product '{row['description']}'. "
                             f"Available: {pr['stock']}, Requested: {row['quantity']}"
                         )
-                    if pr:
-                        c.execute(
-                            "UPDATE products SET stock = stock - ? WHERE id = ?",
-                            (row["quantity"], pid)
-                        )
+                    c.execute(
+                        "UPDATE products SET stock = stock - ? WHERE id = ?",
+                        (row["quantity"], pid)
+                    )
+
+        # ── Customer Balance & Payment Integration ────────────────────
+        if payment_status == "Unpaid":
+            c.execute(
+                "UPDATE customers SET balance = balance + ? WHERE id = ?",
+                (total_amount, customer_id)
+            )
+        elif payment_status == "Paid":
+            c.execute("""
+                INSERT INTO payments (customer_id, amount, payment_method, payment_date, notes, order_id)
+                VALUES (?, ?, 'Cash', ?, ?, ?)
+            """, (
+                customer_id, total_amount, invoice_date,
+                f"Full payment for invoice {invoice_number}",
+                order_id
+            ))
 
         conn.commit()
         return {
@@ -319,9 +340,26 @@ def update_invoice_status(invoice_id: int, payment_status: str):
     conn = get_connection()
     try:
         c = conn.cursor()
-        c.execute("UPDATE invoices SET payment_status=? WHERE id=?", (payment_status, invoice_id))
-        if c.rowcount == 0:
+        c.execute("SELECT customer_id, total_amount, payment_status, invoice_number FROM invoices WHERE id=?", (invoice_id,))
+        inv = c.fetchone()
+        if not inv:
             raise HTTPException(404, "Invoice not found")
+
+        old_status = inv["payment_status"]
+        amount = inv["total_amount"]
+        cid = inv["customer_id"]
+
+        if old_status != payment_status:
+            if old_status == "Unpaid" and payment_status == "Paid":
+                c.execute("UPDATE customers SET balance = MAX(0, balance - ?) WHERE id = ?", (amount, cid))
+                c.execute("""
+                    INSERT INTO payments (customer_id, amount, payment_method, payment_date, notes)
+                    VALUES (?, ?, 'Cash', date('now','localtime'), ?)
+                """, (cid, amount, f"Settlement of invoice {inv['invoice_number']}"))
+            elif old_status == "Paid" and payment_status == "Unpaid":
+                c.execute("UPDATE customers SET balance = balance + ? WHERE id = ?", (amount, cid))
+
+        c.execute("UPDATE invoices SET payment_status=? WHERE id=?", (payment_status, invoice_id))
         conn.commit()
         return {"message": f"Status updated to {payment_status}"}
     except HTTPException:
@@ -334,13 +372,19 @@ def update_invoice_status(invoice_id: int, payment_status: str):
 
 
 def delete_invoice(invoice_id: int):
-    """Soft-delete: mark as Cancelled, do NOT restore stock (preserve records)."""
+    """Soft-delete: mark as Cancelled, reverse outstanding balance if Unpaid (preserve records)."""
     conn = get_connection()
     try:
         c = conn.cursor()
-        c.execute("UPDATE invoices SET status='Cancelled' WHERE id=?", (invoice_id,))
-        if c.rowcount == 0:
+        c.execute("SELECT customer_id, total_amount, payment_status FROM invoices WHERE id=?", (invoice_id,))
+        inv = c.fetchone()
+        if not inv:
             raise HTTPException(404, "Invoice not found")
+
+        if inv["payment_status"] == "Unpaid":
+            c.execute("UPDATE customers SET balance = MAX(0, balance - ?) WHERE id = ?", (inv["total_amount"], inv["customer_id"]))
+
+        c.execute("UPDATE invoices SET status='Cancelled' WHERE id=?", (invoice_id,))
         conn.commit()
         return {"message": "Invoice cancelled"}
     except HTTPException:

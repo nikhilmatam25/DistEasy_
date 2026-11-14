@@ -80,8 +80,9 @@ def list_invoices(
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    customer_id: Optional[int] = Query(None),
 ):
-    return {"invoices": get_all_invoices(search, date_from, date_to, status)}
+    return {"invoices": get_all_invoices(search, date_from, date_to, status, customer_id)}
 
 
 @router.get("/{invoice_id}")

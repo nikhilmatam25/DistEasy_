@@ -34,16 +34,16 @@ def update_product_stock(product_id, stock):
     conn.close()
 
 
-def add_product(name, price, stock):
+def add_product(name, price, stock, hsn_code="", mrp=0.0, unit="Pcs", gst_rate=18.0):
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute(
         """
-        INSERT INTO products (name, price, stock)
-        VALUES (?, ?, ?)
+        INSERT INTO products (name, price, stock, hsn_code, mrp, unit, gst_rate)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
-        (name, price, stock),
+        (name, price, stock, hsn_code, mrp, unit, gst_rate),
     )
 
     conn.commit()

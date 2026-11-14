@@ -27,13 +27,18 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
 import SaveIcon from "@mui/icons-material/Save";
+import ReceiptIcon from "@mui/icons-material/Receipt";
+import { useNavigate } from "react-router-dom";
 
 const API = import.meta.env.VITE_API_URL || "/api";
 
 
 function Orders() {
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [lastSavedOrder, setLastSavedOrder] = useState(null);
 
   // Selected customer ID (integer or "" when nothing is selected)
   const [customerId, setCustomerId] = useState("");
@@ -50,8 +55,15 @@ function Orders() {
   });
   const [validationError, setValidationError] = useState("");
 
+  const loadRecentOrders = () => {
+    axios
+      .get(`${API}/orders`)
+      .then((res) => setRecentOrders(res.data.orders || []))
+      .catch(() => {});
+  };
+
   // -------------------------------------------------------
-  // Load customers and products on mount
+  // Load customers, products, and orders on mount
   // -------------------------------------------------------
   useEffect(() => {
     axios
@@ -67,6 +79,8 @@ function Orders() {
       .catch(() =>
         showSnackbar("Failed to load products. Is the backend running?", "error")
       );
+
+    loadRecentOrders();
   }, []);
 
   // -------------------------------------------------------
@@ -195,6 +209,9 @@ function Orders() {
       const response = await axios.post(`${API}/orders`, payload);
 
       const data = response.data;
+      setLastSavedOrder({ id: data.order_id, total: data.total_amount });
+      loadRecentOrders();
+
       showSnackbar(
         `✅ Order #${data.order_id} saved! Total: ₹${data.total_amount?.toFixed(2)}`,
         "success"
@@ -407,6 +424,96 @@ function Orders() {
           </Grid>
 
         </Grid>
+      </Paper>
+
+      {/* Quick Action Banner for Newly Created Order */}
+      {lastSavedOrder && (
+        <Paper sx={{ p: 2.5, mt: 3, bgcolor: "#E3F2FD", border: "1px solid #90CAF9", borderRadius: 2 }}>
+          <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={2}>
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700} color="primary">
+                Order #{lastSavedOrder.id} has been recorded!
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total: ₹{Number(lastSavedOrder.total).toFixed(2)}. Generate a BUSY-style GST Tax Invoice for this order now:
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              startIcon={<ReceiptIcon />}
+              onClick={() => navigate(`/billing/new?order_id=${lastSavedOrder.id}`)}
+              sx={{ borderRadius: 2 }}
+            >
+              Generate Tax Invoice
+            </Button>
+          </Stack>
+        </Paper>
+      )}
+
+      {/* Recent Orders List with Invoicing Shortcuts */}
+      <Paper sx={{ p: 3, mt: 3, borderRadius: 2 }}>
+        <Typography variant="h6" fontWeight={700} mb={2}>
+          Recent Orders
+        </Typography>
+        <Table size="small">
+          <TableHead>
+            <TableRow sx={{ bgcolor: "#F5F5F5" }}>
+              <TableCell><strong>Order #</strong></TableCell>
+              <TableCell><strong>Customer</strong></TableCell>
+              <TableCell><strong>Date</strong></TableCell>
+              <TableCell><strong>Total Amount</strong></TableCell>
+              <TableCell><strong>Billing Status</strong></TableCell>
+              <TableCell><strong>Action</strong></TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {recentOrders.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 2, color: "text.secondary" }}>
+                  No orders recorded yet.
+                </TableCell>
+              </TableRow>
+            ) : (
+              recentOrders.slice(0, 10).map((ord) => (
+                <TableRow key={ord.id}>
+                  <TableCell sx={{ fontWeight: 600 }}>#{ord.id}</TableCell>
+                  <TableCell>{ord.shop_name}</TableCell>
+                  <TableCell>{ord.order_date?.split(" ")[0] || ord.order_date}</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    ₹{Number(ord.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </TableCell>
+                  <TableCell>
+                    {ord.is_invoiced ? (
+                      <Chip label={`Invoiced (${ord.invoice_number})`} color="success" size="small" />
+                    ) : (
+                      <Chip label="Unbilled" color="warning" size="small" />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {ord.is_invoiced ? (
+                      <Button
+                        size="small"
+                        startIcon={<ReceiptIcon />}
+                        onClick={() => navigate(`/billing?search=${encodeURIComponent(ord.invoice_number)}`)}
+                      >
+                        View Bill
+                      </Button>
+                    ) : (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<ReceiptIcon />}
+                        onClick={() => navigate(`/billing/new?order_id=${ord.id}`)}
+                      >
+                        Create Bill
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </Paper>
 
       {/* Success / Error Snackbar */}

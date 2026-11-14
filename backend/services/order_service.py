@@ -161,3 +161,60 @@ def create_order(customer_id: int, items: list):
 
     finally:
         conn.close()
+
+
+def get_all_orders():
+    """Returns list of all orders with customer details and billing status."""
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT o.id, o.customer_id, o.order_date, o.total_amount, o.payment_type,
+                   c.shop_name, c.owner,
+                   inv.id as invoice_id, inv.invoice_number
+            FROM orders o
+            LEFT JOIN customers c ON o.customer_id = c.id
+            LEFT JOIN invoices inv ON o.id = inv.order_id AND inv.status != 'Cancelled'
+            ORDER BY o.id DESC
+        """)
+        rows = cursor.fetchall()
+        result = []
+        for r in rows:
+            d = dict(r)
+            d["is_invoiced"] = bool(d.get("invoice_id"))
+            result.append(d)
+        return result
+    finally:
+        conn.close()
+
+
+def get_order_by_id(order_id: int):
+    """Returns single order with customer info, billing status, and line items."""
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT o.id, o.customer_id, o.order_date, o.total_amount, o.payment_type,
+                   c.shop_name, c.owner, c.phone, c.address, c.gstin,
+                   inv.id as invoice_id, inv.invoice_number
+            FROM orders o
+            LEFT JOIN customers c ON o.customer_id = c.id
+            LEFT JOIN invoices inv ON o.id = inv.order_id AND inv.status != 'Cancelled'
+            WHERE o.id = ?
+        """, (order_id,))
+        order = cursor.fetchone()
+        if not order:
+            return None
+        res = dict(order)
+        res["is_invoiced"] = bool(res.get("invoice_id"))
+        cursor.execute("""
+            SELECT oi.id, oi.product_id, oi.quantity, oi.price,
+                   p.name as product_name, p.hsn_code, p.mrp, p.unit, p.gst_rate
+            FROM order_items oi
+            LEFT JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = ?
+        """, (order_id,))
+        res["items"] = [dict(r) for r in cursor.fetchall()]
+        return res
+    finally:
+        conn.close()

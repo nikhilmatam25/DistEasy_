@@ -13,12 +13,16 @@ import ReceiptIcon from "@mui/icons-material/Receipt";
 import SaveIcon from "@mui/icons-material/Save";
 import InfoIcon from "@mui/icons-material/Info";
 
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+
 const API = import.meta.env.VITE_API_URL || "/api";
 
 
 function Settings() {
   const [settings, setSettings] = useState({
-    company_name: "", phone: "", email: "", address: "", gst_number: "", theme: "light"
+    company_name: "", phone: "", email: "", address: "", gst_number: "", theme: "light",
+    bank_name: "", bank_account: "", bank_ifsc: "", bank_branch: "",
+    state_code: "", state_name: "", invoice_prefix: "INV"
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -85,6 +89,55 @@ function Settings() {
               <TextField fullWidth label="Business Address" multiline rows={2} value={settings.address || ""}
                 onChange={e => set("address", e.target.value)}
                 InputProps={{ startAdornment: <InputAdornment position="start"><LocationOnIcon color="action" /></InputAdornment> }} />
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      {/* Bank & Billing Configuration */}
+      <Card elevation={2} sx={{ borderRadius: 3, mb: 3 }}>
+        <CardHeader
+          avatar={<AccountBalanceIcon color="primary" />}
+          title={<Typography variant="h6" fontWeight={700}>Bank &amp; GST Details for Invoicing</Typography>}
+          subheader="Appears on printable GST invoices"
+          sx={{ borderBottom: "1px solid #eee", pb: 2 }}
+        />
+        <CardContent>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <TextField fullWidth label="Bank Name" value={settings.bank_name || ""}
+                onChange={e => set("bank_name", e.target.value)}
+                placeholder="e.g. State Bank of India" />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField fullWidth label="Bank Account Number" value={settings.bank_account || ""}
+                onChange={e => set("bank_account", e.target.value)}
+                placeholder="e.g. 123456789012" />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField fullWidth label="IFSC Code" value={settings.bank_ifsc || ""}
+                onChange={e => set("bank_ifsc", e.target.value)}
+                placeholder="e.g. SBIN0001234" />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField fullWidth label="Branch Name" value={settings.bank_branch || ""}
+                onChange={e => set("bank_branch", e.target.value)}
+                placeholder="e.g. Main Market Branch" />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField fullWidth label="State Name" value={settings.state_name || ""}
+                onChange={e => set("state_name", e.target.value)}
+                placeholder="e.g. Telangana" />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField fullWidth label="State Code" value={settings.state_code || ""}
+                onChange={e => set("state_code", e.target.value)}
+                placeholder="e.g. 36" />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField fullWidth label="Invoice Prefix" value={settings.invoice_prefix || "INV"}
+                onChange={e => set("invoice_prefix", e.target.value)}
+                placeholder="e.g. INV" />
             </Grid>
           </Grid>
         </CardContent>

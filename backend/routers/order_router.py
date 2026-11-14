@@ -2,9 +2,22 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
 from typing import List
 
-from services.order_service import create_order
+from services.order_service import create_order, get_all_orders, get_order_by_id
 
 router = APIRouter()
+
+
+@router.get("/orders")
+def list_orders():
+    return {"orders": get_all_orders()}
+
+
+@router.get("/orders/{order_id}")
+def get_single_order(order_id: int):
+    ord_data = get_order_by_id(order_id)
+    if not ord_data:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return ord_data
 
 
 class OrderItem(BaseModel):

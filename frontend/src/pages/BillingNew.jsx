@@ -1,25 +1,26 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import {
-  Typography, Box, Grid, Paper, Card, CardContent, Stack, Button,
+  Typography, Box, Grid, Paper, Stack, Button,
   TextField, Table, TableHead, TableRow, TableCell, TableBody,
   MenuItem, Select, FormControl, InputLabel, IconButton, Divider,
-  Alert, Snackbar, CircularProgress, Chip, Tooltip, Switch,
-  FormControlLabel,
+  Alert, Snackbar, CircularProgress, Switch,
+  FormControlLabel, Chip
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SaveIcon from "@mui/icons-material/Save";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CalculateIcon from "@mui/icons-material/Calculate";
+import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 
 const API = import.meta.env.VITE_API_URL || "/api";
 
 const DEFAULT_ITEM = () => ({
   product_id: "",
   description: "",
-  hsn_code: "",
+  hsn_code: "1905",
   mrp: "",
   selling_price: "",
   quantity: 1,
@@ -49,7 +50,7 @@ function calcItem(item, isInterstate) {
 
 function round2(n) { return Math.round(n * 100) / 100; }
 
-// ─── Amount in words (simple, client-side preview) ───────────────────
+// ─── Amount in words ──────────────────────────────────────────────────
 function amountWords(amount) {
   const ones = ["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine",
     "Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen",
@@ -76,9 +77,13 @@ function amountWords(amount) {
 // ═══════════════════════════════════════════════════════════════════════
 function BillingNew() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const paramOrderId = searchParams.get("order_id");
 
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
+  const [unbilledOrders, setUnbilledOrders] = useState([]);
+  const [selectedOrderId, setSelectedOrderId] = useState(paramOrderId || "");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
@@ -94,16 +99,57 @@ function BillingNew() {
 
   const showSnack = (msg, sev = "success") => setSnack({ open: true, msg, sev });
 
+  const loadFromOrder = useCallback(async (orderId) => {
+    try {
+      const res = await axios.get(`${API}/orders/${orderId}`);
+      const ord = res.data;
+      if (ord.is_invoiced) {
+        showSnack(`Order #${orderId} has already been invoiced (${ord.invoice_number})`, "warning");
+        return;
+      }
+      setCustomerId(ord.customer_id);
+      setSelectedOrderId(orderId);
+      if (ord.items && ord.items.length > 0) {
+        setItems(ord.items.map(it => {
+          const gst = it.gst_rate || 18;
+          return {
+            product_id: it.product_id,
+            description: it.product_name,
+            hsn_code: it.hsn_code || "1905",
+            mrp: it.mrp || it.price,
+            selling_price: it.price,
+            quantity: it.quantity,
+            unit: it.unit || "Pcs",
+            cgst_pct: gst / 2,
+            sgst_pct: gst / 2,
+            igst_pct: gst,
+          };
+        }));
+      }
+      showSnack(`Loaded Order #${orderId} details and ${ord.items?.length || 0} items`);
+    } catch {
+      showSnack("Failed to load order details", "error");
+    }
+  }, []);
+
   useEffect(() => {
     Promise.all([
       axios.get(`${API}/customers`),
       axios.get(`${API}/products`),
-    ]).then(([cr, pr]) => {
+      axios.get(`${API}/orders`).catch(() => ({ data: { orders: [] } })),
+    ]).then(([cr, pr, or]) => {
       setCustomers(cr.data.customers || []);
       setProducts(pr.data.products || []);
+      const allOrds = or.data.orders || [];
+      const unbilled = allOrds.filter(o => !o.is_invoiced);
+      setUnbilledOrders(unbilled);
+
+      if (paramOrderId) {
+        loadFromOrder(paramOrderId);
+      }
     }).catch(() => showSnack("Failed to load data", "error"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [paramOrderId, loadFromOrder]);
 
   // ── Item handlers ─────────────────────────────────────────────────
   const setItemField = (idx, field, val) => {
@@ -113,12 +159,18 @@ function BillingNew() {
   const fillFromProduct = (idx, productId) => {
     const p = products.find(x => x.id === productId);
     if (!p) return;
+    const gst = p.gst_rate || 18;
     setItems(prev => prev.map((it, i) => i === idx ? {
       ...it,
       product_id: productId,
       description: p.name,
-      mrp: p.price,
+      hsn_code: p.hsn_code || "1905",
+      mrp: p.mrp || p.price,
       selling_price: p.price,
+      unit: p.unit || "Pcs",
+      cgst_pct: gst / 2,
+      sgst_pct: gst / 2,
+      igst_pct: gst,
     } : it));
   };
 
@@ -153,11 +205,12 @@ function BillingNew() {
         is_interstate: isInterstate,
         discount_pct: parseFloat(discountPct) || 0,
         notes,
+        order_id: selectedOrderId ? parseInt(selectedOrderId) : null,
         payment_status: paymentStatus,
         items: items.map(it => ({
           product_id: it.product_id ? parseInt(it.product_id) : null,
           description: it.description,
-          hsn_code: it.hsn_code || "",
+          hsn_code: it.hsn_code || "1905",
           mrp: parseFloat(it.mrp) || 0,
           selling_price: parseFloat(it.selling_price),
           quantity: parseFloat(it.quantity),
@@ -169,7 +222,7 @@ function BillingNew() {
       };
       const res = await axios.post(`${API}/invoices`, payload);
       showSnack(`✅ Invoice ${res.data.invoice_number} created! Total: ₹${res.data.total_amount}`);
-      setTimeout(() => navigate("/billing"), 1500);
+      setTimeout(() => navigate("/billing"), 1200);
     } catch (e) {
       showSnack(e.response?.data?.detail || "Error creating invoice", "error");
     } finally {
@@ -190,16 +243,55 @@ function BillingNew() {
         </IconButton>
         <Box>
           <Typography variant="h4" fontWeight={700}>Create New Invoice</Typography>
-          <Typography variant="body2" color="text.secondary">GST Tax Invoice</Typography>
+          <Typography variant="body2" color="text.secondary">
+            GST Tax Invoice (BUSY format compatible)
+          </Typography>
         </Box>
       </Stack>
 
       <Grid container spacing={3}>
-        {/* ── Left: Customer + Invoice details ── */}
+        {/* ── Left: Customer + Order Link + Invoice Details ── */}
         <Grid item xs={12} md={5}>
+          {/* Order conversion selector */}
+          <Paper sx={{ p: 2, borderRadius: 2, mb: 2, bgcolor: "#F0F7FF", border: "1px solid #BBDEFB" }}>
+            <Stack direction="row" alignItems="center" gap={1} mb={1}>
+              <ShoppingBagIcon color="primary" fontSize="small" />
+              <Typography variant="subtitle2" fontWeight={700} color="primary">
+                Create from Existing Order (Optional)
+              </Typography>
+            </Stack>
+            <FormControl fullWidth size="small">
+              <InputLabel>Select Unbilled Order</InputLabel>
+              <Select
+                value={selectedOrderId}
+                label="Select Unbilled Order"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val) loadFromOrder(val);
+                  else setSelectedOrderId("");
+                }}
+              >
+                <MenuItem value=""><em>None (New Direct Bill)</em></MenuItem>
+                {unbilledOrders.map(o => (
+                  <MenuItem key={o.id} value={o.id}>
+                    Order #{o.id} — {o.shop_name} (₹{o.total_amount})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            {selectedOrderId && (
+              <Chip
+                label={`Linked to Order #${selectedOrderId} (stock won't be deducted twice)`}
+                size="small"
+                color="info"
+                sx={{ mt: 1, fontSize: 11 }}
+              />
+            )}
+          </Paper>
+
           <Paper sx={{ p: 3, borderRadius: 2, mb: 2 }}>
             <Typography variant="h6" fontWeight={700} mb={2} color="primary">
-              Invoice Details
+              Customer &amp; Tax Mode
             </Typography>
             <Stack gap={2}>
               <FormControl fullWidth>
@@ -216,11 +308,19 @@ function BillingNew() {
 
               {selectedCustomer && (
                 <Box sx={{ bgcolor: "#E3F2FD", borderRadius: 1, p: 1.5, fontSize: 13 }}>
-                  <Typography variant="caption" color="primary" fontWeight={600}>Customer Info</Typography>
-                  <Typography variant="body2">{selectedCustomer.shop_name}</Typography>
+                  <Typography variant="caption" color="primary" fontWeight={600}>Customer Details</Typography>
+                  <Typography variant="body2" fontWeight={600}>{selectedCustomer.shop_name}</Typography>
                   {selectedCustomer.owner && <Typography variant="body2">{selectedCustomer.owner}</Typography>}
                   {selectedCustomer.address && <Typography variant="body2">{selectedCustomer.address}</Typography>}
                   {selectedCustomer.phone && <Typography variant="body2">Ph: {selectedCustomer.phone}</Typography>}
+                  {selectedCustomer.gstin && (
+                    <Typography variant="body2" fontWeight={600} color="primary.dark">
+                      GSTIN: {selectedCustomer.gstin}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
+                    Current Outstanding: ₹{Number(selectedCustomer.balance || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </Typography>
                 </Box>
               )}
 
@@ -232,8 +332,8 @@ function BillingNew() {
                 <InputLabel>Payment Status</InputLabel>
                 <Select value={paymentStatus} label="Payment Status"
                   onChange={e => setPaymentStatus(e.target.value)}>
-                  <MenuItem value="Unpaid">Unpaid</MenuItem>
-                  <MenuItem value="Paid">Paid</MenuItem>
+                  <MenuItem value="Unpaid">Unpaid (Added to Outstanding)</MenuItem>
+                  <MenuItem value="Paid">Paid (Recorded in Payments)</MenuItem>
                   <MenuItem value="Partial">Partial</MenuItem>
                 </Select>
               </FormControl>
@@ -247,37 +347,37 @@ function BillingNew() {
                       {isInterstate ? "Inter-State (IGST)" : "Intra-State (CGST + SGST)"}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {isInterstate ? "Applied as combined IGST" : "Split equally as CGST + SGST"}
+                      {isInterstate ? "Integrated GST applied" : "Split equally as Central & State GST"}
                     </Typography>
                   </Box>
                 }
               />
 
-              <TextField fullWidth label="Discount (%)" type="number"
+              <TextField fullWidth label="Trade Discount (%)" type="number"
                 inputProps={{ min: 0, max: 100, step: 0.5 }}
                 value={discountPct} onChange={e => setDiscountPct(e.target.value)} />
 
-              <TextField fullWidth label="Notes" multiline rows={2}
+              <TextField fullWidth label="Invoice Notes / Terms" multiline rows={2}
                 value={notes} onChange={e => setNotes(e.target.value)}
-                placeholder="Optional notes for this invoice..." />
+                placeholder="Optional notes printed on invoice..." />
             </Stack>
           </Paper>
 
           {/* Totals summary */}
-          <Paper sx={{ p: 2, borderRadius: 2, bgcolor: "#F8F9FA" }}>
+          <Paper sx={{ p: 2.5, borderRadius: 2, bgcolor: "#F8F9FA", border: "1px solid #E0E0E0" }}>
             <Typography variant="h6" fontWeight={700} mb={1.5} color="primary">
               <CalculateIcon sx={{ mr: 1, verticalAlign: "middle" }} />
-              Invoice Summary
+              Calculation Breakdown
             </Typography>
             {[
               ["Subtotal (Taxable)", `₹${subtotal.toFixed(2)}`],
               ...(discountPct > 0 ? [[`Discount (${discountPct}%)`, `-₹${discountAmt.toFixed(2)}`]] : []),
-              ...(discountPct > 0 ? [["After Discount", `₹${taxableAfterDiscount.toFixed(2)}`]] : []),
+              ...(discountPct > 0 ? [["Taxable Subtotal", `₹${taxableAfterDiscount.toFixed(2)}`]] : []),
               ...(!isInterstate ? [
-                [`CGST`, `₹${totalCGST.toFixed(2)}`],
-                [`SGST`, `₹${totalSGST.toFixed(2)}`],
+                [`Total CGST`, `₹${totalCGST.toFixed(2)}`],
+                [`Total SGST`, `₹${totalSGST.toFixed(2)}`],
               ] : [
-                [`IGST`, `₹${totalIGST.toFixed(2)}`],
+                [`Total IGST`, `₹${totalIGST.toFixed(2)}`],
               ]),
             ].map(([label, val]) => (
               <Stack key={label} direction="row" justifyContent="space-between" sx={{ py: 0.5 }}>
@@ -286,9 +386,9 @@ function BillingNew() {
               </Stack>
             ))}
             <Divider sx={{ my: 1 }} />
-            <Stack direction="row" justifyContent="space-between">
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Typography variant="h6" fontWeight={700} color="primary">Grand Total</Typography>
-              <Typography variant="h6" fontWeight={700} color="primary">
+              <Typography variant="h5" fontWeight={800} color="primary">
                 ₹{grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </Typography>
             </Stack>
@@ -300,11 +400,16 @@ function BillingNew() {
           </Paper>
         </Grid>
 
-        {/* ── Right: Product rows ── */}
+        {/* ── Right: Product Items ── */}
         <Grid item xs={12} md={7}>
           <Paper sx={{ p: 3, borderRadius: 2 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h6" fontWeight={700} color="primary">Products / Items</Typography>
+              <Box>
+                <Typography variant="h6" fontWeight={700} color="primary">Product Items</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Choose from existing products or type custom items
+                </Typography>
+              </Box>
               <Button size="small" startIcon={<AddIcon />} variant="outlined"
                 onClick={addRow}>Add Row</Button>
             </Stack>
@@ -313,7 +418,7 @@ function BillingNew() {
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: "#1565C0" }}>
-                    {["Product", "HSN", "MRP (₹)", "Rate (₹)", "Qty", "Unit",
+                    {["Product", "HSN", "MRP (₹)", "Selling (₹)", "Qty", "Unit",
                       isInterstate ? "IGST%" : "CGST%",
                       ...(!isInterstate ? ["SGST%"] : []),
                       "Taxable", "Tax Amt", "Total", ""].map(h => (
@@ -337,11 +442,11 @@ function BillingNew() {
                               if (e.target.value) fillFromProduct(idx, e.target.value);
                               else setItemField(idx, "product_id", "");
                             }}
-                            renderValue={v => v ? (products.find(p => p.id === v)?.name || v) : <em>Select…</em>}
+                            renderValue={v => v ? (products.find(p => p.id === v)?.name || v) : <em>Select product…</em>}
                             sx={{ fontSize: 11, mb: 0.5 }}>
-                            <MenuItem value=""><em>None / Manual</em></MenuItem>
+                            <MenuItem value=""><em>Custom / Manual Item</em></MenuItem>
                             {products.map(p => (
-                              <MenuItem key={p.id} value={p.id} disabled={p.stock === 0}>
+                              <MenuItem key={p.id} value={p.id} disabled={!selectedOrderId && p.stock === 0}>
                                 {p.name}
                                 <Typography variant="caption" sx={{ ml: 1, color: p.stock < 10 ? "error.main" : "text.secondary" }}>
                                   (stock: {p.stock})
@@ -388,7 +493,7 @@ function BillingNew() {
                           <Select size="small" fullWidth value={item.unit}
                             onChange={e => setItemField(idx, "unit", e.target.value)}
                             sx={{ fontSize: 11 }}>
-                            {["Pcs", "Box", "Kg", "Ltr", "Doz", "Bag", "Ctn"].map(u => (
+                            {["Pcs", "Box", "Kg", "Ltr", "Doz", "Bag", "Ctn", "Tin"].map(u => (
                               <MenuItem key={u} value={u} sx={{ fontSize: 12 }}>{u}</MenuItem>
                             ))}
                           </Select>
@@ -419,7 +524,7 @@ function BillingNew() {
                         <TableCell sx={{ fontSize: 11, px: 0.5, color: "text.secondary" }}>
                           ₹{taxAmt.toFixed(2)}
                         </TableCell>
-                        <TableCell sx={{ fontSize: 11, px: 0.5, fontWeight: 600, color: "#1565C0" }}>
+                        <TableCell sx={{ fontSize: 11, px: 0.5, fontWeight: 700, color: "#1565C0" }}>
                           ₹{c.total.toFixed(2)}
                         </TableCell>
 
@@ -445,7 +550,7 @@ function BillingNew() {
                 disabled={saving}>Cancel</Button>
               <Button variant="contained" size="large" startIcon={
                 saving ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
-                onClick={handleSave} disabled={saving} sx={{ px: 4 }}>
+                onClick={handleSave} disabled={saving} sx={{ px: 4, borderRadius: 2 }}>
                 {saving ? "Saving…" : "Save Invoice"}
               </Button>
             </Stack>
@@ -455,10 +560,10 @@ function BillingNew() {
 
       {/* Snackbar */}
       <Snackbar open={snack.open} autoHideDuration={5000}
-        onClose={() => setSnack(s => ({ ...s, open: false }))}
+        onClose={() => setSnack({ ...snack, open: false })}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
         <Alert severity={snack.sev} variant="filled"
-          onClose={() => setSnack(s => ({ ...s, open: false }))}>{snack.msg}</Alert>
+          onClose={() => setSnack({ ...snack, open: false })}>{snack.msg}</Alert>
       </Snackbar>
     </Box>
   );

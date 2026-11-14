@@ -196,6 +196,22 @@ CREATE TABLE IF NOT EXISTS invoice_items (
 )
 """)
 
+# -------------------------
+# Safe column additions (idempotent migrations)
+# -------------------------
+safe_columns = [
+    ("products", "hsn_code TEXT DEFAULT ''"),
+    ("products", "mrp REAL DEFAULT 0"),
+    ("products", "unit TEXT DEFAULT 'Pcs'"),
+    ("products", "gst_rate REAL DEFAULT 18"),
+    ("customers", "gstin TEXT DEFAULT ''"),
+]
+for table, col_def in safe_columns:
+    try:
+        cursor.execute(f"ALTER TABLE {table} ADD COLUMN {col_def}")
+    except sqlite3.OperationalError:
+        pass
+
 # Seed delivery rows for existing orders that have no delivery record
 cursor.execute("""
     INSERT OR IGNORE INTO delivery (order_id, customer_id, status, created_at)
@@ -218,4 +234,4 @@ cursor.execute("SELECT COUNT(*) FROM company_settings")
 print("Company settings seeded:", cursor.fetchone()[0])
 
 conn.close()
-print("\n✅ Migration complete.")
+print("\n[OK] Migration complete.")

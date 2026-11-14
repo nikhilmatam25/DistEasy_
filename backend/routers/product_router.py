@@ -25,8 +25,16 @@ def update_stock(product_id: int, stock: int):
 
 
 @router.post("/products")
-def create_product(name: str, price: float, stock: int):
-    add_product(name, price, stock)
+def create_product(
+    name: str,
+    price: float,
+    stock: int,
+    hsn_code: str = "",
+    mrp: float = 0.0,
+    unit: str = "Pcs",
+    gst_rate: float = 18.0,
+):
+    add_product(name, price, stock, hsn_code, mrp, unit, gst_rate)
 
     return {
         "message": "Product added successfully"
